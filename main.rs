@@ -33,7 +33,6 @@ struct Paddle {
 impl Paddle : GameObject {
     fn update(&mut self,game: &mut Game) {
         self.position += self.velocity;
-        self.velocity *= 0.96;
     }
     fn draw(&self, game: &Game) {
         fillCircle(self.position, self.radius);
@@ -208,8 +207,8 @@ fn handleControls(game:&mut Game) {
     let diff = game.mouse - game.player.position;
     let dist = diff.length();
     let maxSpeed = 50.;
-    game.player.velocity = game.player.velocity * 0.09
-        + diff.normalizeOrZero() * (if (dist < maxSpeed) { dist } else { maxSpeed }) * 0.91;
+    game.player.velocity = game.player.velocity * 0.3
+        + diff.normalizeOrZero() * (if (dist < maxSpeed) { dist } else { maxSpeed }) * 0.5;
 }
 
 fn handleCollision(game:&mut Game) {
