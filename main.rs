@@ -188,8 +188,13 @@ fn drawGame(game: &mut Game) {
 }
 
 fn drawScore(score: uint, position: Vec2, direction: Vec2) {
+    let columns = float::sqrt(score as float) as uint;
     for core::uint::range(0,score) |index| {
-        fillCircle(position+direction*(index as float), 5.);
+        let x = index / columns;
+        let y = index % columns;
+        let right = direction;
+        let down = Vec2(0.,1.)*direction.length();
+        fillCircle(position+right*(x as float)+down*(y as float), 5.);
     }
 }
 
