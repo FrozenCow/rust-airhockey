@@ -224,14 +224,33 @@ fn handleCollision(game:&mut Game) {
     }
 }
 
+fn between<T:Ord>(x:T, a:T, b:T) -> bool { x > a && x < b }
+fn distance(a:Vec2,b:Vec2) -> float { (a-b).length() }
+
 fn handleOpponent(game:&mut Game) {
-    let speed = 3.;
-    let opponent = game.opponent;
+    let defenceSpeed = 2.;
+    let attackSpeed = 5.;
+    let position = game.opponent.position;
     let goal = Vec2(game.field.x, game.field.y*0.5);
     let puck = game.puck;
-
+    let goalDirection = (position - goal).normalizeOrZero();
+    let puckDirection = (position - puck.position).normalizeOrZero();
+    let puckDistance = (position - puck.position).length();
     let desiredPosition = (puck.position + goal) * 0.5; // Right between puck and goal
-    opponent.velocity = velocityTowards(opponent.position, desiredPosition, speed);
+    let desiredVelocity = if // Should we dash forward (attack) ?
+           goalDirection.dot(puckDirection) < 0.
+        && puckDistance < 100.
+        && between(puckDirection.dot(puck.velocity), -2.,10.)
+    { velocityTowards(position, puck.position, attackSpeed) }
+    else if // Should we move towards the puck (player is too far away) ?
+           goalDirection.dot(puckDirection) < 0.
+        && puck.velocity.length() < 3.
+        && distance(game.player.position,puck.position) / distance(position,puck.position) > 2.0
+    { velocityTowards(position, puck.position, defenceSpeed) }
+    else // Should we stand between puck and goal (defend) ?
+    { velocityTowards(position, desiredPosition, defenceSpeed) };
+
+    game.opponent.velocity = game.opponent.velocity * 0.85 + desiredVelocity * 0.15;
 }
 
 fn velocityTowards(source:Vec2, destination:Vec2, speed:float) -> Vec2 {
