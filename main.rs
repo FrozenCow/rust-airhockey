@@ -20,43 +20,48 @@ fn glVertex(v: Vec2) {
     glVertex2f(v.x as f32, v.y as f32);
 }
 
+trait GameObject {
+    fn update(&mut self, game: &mut Game);
+    fn draw(&self, game: &Game);
+}
+
 struct Paddle {
-    mut position: Vec2,
-    mut velocity: Vec2
+    position: Vec2,
+    velocity: Vec2,
+    radius: float
 }
 impl Paddle : GameObject {
-    fn update(game: &mut Game) {
+    fn update(&mut self,game: &mut Game) {
         self.position += self.velocity;
+        self.velocity *= 0.96;
     }
-    fn draw(game: &Game) {
-        fillCircle(self.position, 50.);
+    fn draw(&self, game: &Game) {
+        fillCircle(self.position, self.radius);
     }
 }
 
 struct Puck {
-    mut position: Vec2,
-    mut velocity: Vec2
+    position: Vec2,
+    velocity: Vec2,
+    radius: float
 }
 impl Puck: GameObject {
-    fn update(game: &mut Game) {
+    fn update(&mut self,game: &mut Game) {
         self.position += self.velocity;
     }
-    fn draw(game: &Game) {
-        fillCircle(self.position, 30.);
+    fn draw(&self, game: &Game) {
+        fillCircle(self.position, self.radius);
     }
-}
-
-
-trait GameObject {
-    fn update(game: &mut Game);
-    fn draw(game: &Game);
 }
 
 struct Game {
-    mut objects: GameObjectManager,
-    player: @mut @Paddle,
-    mut field: Vec2,
-    mut mouse: Vec2
+    objects: GameObjectManager,
+    player: @mut Paddle,
+    opponent: @mut Paddle,
+    puck: @mut Puck,
+    paddles: ~[@mut Paddle],
+    field: Vec2,
+    mouse: Vec2,
 }
 
 fn loadTexture() {
@@ -70,9 +75,9 @@ fn loadTexture() {
 }
 
 struct GameObjectManager {
-    objects: DVec<@mut GameObject>,
-    pendingAdd: DVec<@mut GameObject>,
-    pendingRemove: DVec<@mut GameObject>
+    objects: DVec<@GameObject>,
+    pendingAdd: DVec<@GameObject>,
+    pendingRemove: DVec<@GameObject>
 }
 fn GameObjectManager() -> GameObjectManager {
     GameObjectManager {
@@ -82,37 +87,38 @@ fn GameObjectManager() -> GameObjectManager {
     }
 }
 impl GameObjectManager {
-    fn add(gameObject: @mut GameObject) {
-        unsafe {
-            self.pendingAdd.push(gameObject);
-        }
+    fn add(&self,gameObject: @GameObject) {
+        self.pendingAdd.push(gameObject);
     }
-    fn remove(gameObject: @mut GameObject) {
-        unsafe {
-            self.pendingRemove.push(gameObject);
-        }
+    fn remove(&self,gameObject: @GameObject) {
+        self.pendingRemove.push(gameObject);
     }
-    fn handlePending() {
-        unsafe {
-            while self.pendingAdd.len() > 0 {
-                self.objects.push(self.pendingAdd.pop());
-            }
+    fn handlePending(&self,) {
+        while self.pendingAdd.len() > 0 {
+            self.objects.push(self.pendingAdd.pop());
+        }
 
-            while self.pendingRemove.len() > 0 {
-                remove_gameobject(&self.objects,self.pendingAdd.pop());
-            }
+        while self.pendingRemove.len() > 0 {
+            remove_gameobject(&self.objects,self.pendingAdd.pop());
+        }
+    }
+    pub fn each_mut(&self,f: fn(elem: &mut @GameObject) -> bool) {
+        do self.objects.check_out |v| {
+            let mut v:~[@GameObject] = move v;
+            each_mut(v,f);
+            self.objects.give_back(move v);
         }
     }
 }
-impl GameObjectManager: iter::BaseIter<@mut GameObject> {
-    pure fn each(&self, blk: fn(v: &@mut GameObject) -> bool) { self.objects.each(blk) }
+impl GameObjectManager: iter::BaseIter<@GameObject> {
+    pure fn each(&self, blk: fn(v: &@GameObject) -> bool) { self.objects.each(blk) }
     pure fn size_hint(&self) -> Option<uint> { self.objects.size_hint() }
 }
-fn remove_gameobject(xs:&DVec<@mut GameObject>, x:@mut GameObject) -> Option<uint> {
+fn remove_gameobject(xs:&DVec<@GameObject>, x:@GameObject) -> Option<uint> {
     unsafe {
         do xs.check_out |v| {
-            let mut v:~[@mut @GameObject] = move v;
-            let result = match position(v, |&y| { ref_eq(x, y) }) {
+            let mut v:~[@GameObject] = move v;
+            let result = match position(v, |&y| { core::ptr::ref_eq(&x,&y) }) {
                 None => None,
                 Some(index) => {
                     v.remove(index);
@@ -153,13 +159,11 @@ fn fillCircle(position: Vec2, radius: float) {
     glEnd();
 }
 
-fn drawGame(game: @mut Game) {
+fn drawGame(game: &mut Game) {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    unsafe {
-        for game.objects.each |object| {
-            object.draw(game);
-        }
+    for game.objects.each |object| {
+        object.draw(game);
     }
 
     strokeCircle(game.mouse, 10.0);
@@ -167,11 +171,9 @@ fn drawGame(game: @mut Game) {
     swap_buffers();
 }
 
-fn updateGame(game:@mut Game) {
-    unsafe {
-        for game.objects.each |object| {
-            object.update(game);
-        }
+fn updateGame(game:&mut Game) {
+    for game.objects.each_mut |object| {
+        object.update(game);
     }
 }
 
@@ -179,11 +181,40 @@ fn handleControls(game:@mut Game) {
     let diff = game.mouse - game.player.position;
     let dist = diff.length();
     let maxSpeed = 50.;
-    game.player.velocity = diff.normalizeOrZero() * (if (dist < maxSpeed) { dist } else { maxSpeed });
+    game.player.velocity = game.player.velocity * 0.09
+        + diff.normalizeOrZero() * (if (dist < maxSpeed) { dist } else { maxSpeed }) * 0.91;
 }
 
-fn handleCollision(game:@mut Game) {
-    
+fn handleCollision(game:&mut Game) {
+    for game.paddles.each |paddle| {
+        let diff = (game.puck.position - paddle.position);
+        if (diff.length() < game.puck.radius+paddle.radius) {
+            game.puck.velocity -= getBounceImpact(diff.normalizeOrZero(), game.puck.velocity - paddle.velocity, 0.9);
+        }
+    };
+    match getSurface(game.puck) {
+        Some(surface) => {
+            game.puck.velocity -= getBounceImpact(surface, game.puck.velocity, 0.9);
+        }
+        None => {}
+    }
+}
+
+fn getBounceImpact(surface:Vec2, velocity:Vec2, bounciness:float) -> Vec2 {
+    let impact = surface.dot(velocity);
+    if (impact < 0.) {
+        surface * impact * (1. + bounciness)
+    } else {
+        Vec2(0.,0.)
+    }
+}
+
+fn getSurface(p:&Puck) -> Option<Vec2> {
+    if p.position.x < p.radius { Some(Vec2(1.,0.)) }
+    else if p.position.x > 640.-p.radius { Some(Vec2(-1.,0.)) }
+    else if (p.position.y < p.radius) { Some(Vec2(0.,1.)) }
+    else if (p.position.y > 480.-p.radius) { Some(Vec2(0.,-1.)) }
+    else { None }
 }
 
 fn main() {
@@ -196,21 +227,38 @@ fn main() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    let player: @mut @Paddle = @mut @Paddle {
+    let player: @mut Paddle = @mut Paddle {
         position: Vec2(100., 100.),
-        velocity: Vec2(0.,0.)
+        velocity: Vec2(0.,0.),
+        radius: 50.
     };
 
-    let mut game = @mut Game {
+    let opponent: @mut Paddle = @mut Paddle {
+        position: Vec2(540., 100.),
+        velocity: Vec2(0.,0.),
+        radius: 50.
+    };
+
+    let puck: @mut Puck = @mut Puck {
+        position: Vec2{x:320.,y:240.},
+        velocity: Zero,
+        radius: 30.
+    };
+
+    let game = @mut Game {
         objects: GameObjectManager(),
         field: Vec2(640.,480.),
         mouse: Vec2(0.,0.),
-        player: player
+        player: player,
+        opponent: opponent,
+        puck: puck,
+        paddles: ~[player, opponent]
     };
 
     unsafe {
-        game.objects.add(@mut (*player as @GameObject));
-        game.objects.add(@mut (@Puck { position: Vec2{x:320.,y:240.}, velocity: Zero } as @GameObject));
+        game.objects.add(player as @GameObject);
+        game.objects.add(puck as @GameObject);
+        game.objects.add(opponent as @GameObject);
 
         game.objects.handlePending();
     
