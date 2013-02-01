@@ -172,7 +172,7 @@ fn fillCircle(position: Vec2, radius: float) {
     glEnd();
 }
 
-fn drawGame(game: &mut Game) {
+fn drawGame(game: &Game) {
     glClear(GL_COLOR_BUFFER_BIT);
 
     for game.objects.each |object| {
