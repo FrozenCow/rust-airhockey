@@ -76,16 +76,6 @@ struct Game {
     mouse: Vec2
 }
 
-fn loadTexture() {
-    let textureid:GLuint = 0;
-    glGenTextures(1, &textureid);
-    glBindTexture(GL_TEXTURE_2D, textureid);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR as GLfloat);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR as GLfloat);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT as GLint); 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT as GLint);
-}
-
 struct GameObjectManager {
     objects: DVec<@GameObject>,
     pendingAdd: DVec<@GameObject>,
