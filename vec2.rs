@@ -66,4 +66,10 @@ impl Vec2 {
     pure fn dot(&self, b: Vec2) -> float {
         self.x * b.x + self.y * b.y
     }
+    pure fn normalRight(&self) -> Vec2 {
+        Vec2 { x: -self.y, y: self.x }
+    }
+    pure fn normalLeft(&self) -> Vec2 {
+        Vec2 { x: self.y, y: -self.x }
+    }
 }
