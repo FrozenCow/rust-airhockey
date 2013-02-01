@@ -1,5 +1,5 @@
 extern mod sdl;
-extern mod gl;
+mod gl;
 mod vec2;
 
 use core::float::*;
@@ -11,12 +11,12 @@ use sdl::sdl::*;
 use sdl::video::*;
 use sdl::event::*;
 use core::dvec::DVec;
-use gl::gl::*;
+use gl::*;
 //use option::{Some, None};
 use vec2::*;
 
 
-fn glVertex(v: Vec2) {
+unsafe fn glVertex(v: Vec2) {
     glVertex2f(v.x as f32, v.y as f32);
 }
 
@@ -146,23 +146,27 @@ fn circle(position:Vec2, radius:float, f:fn(Vec2) -> bool) {
 }
 
 fn strokeCircle(position:Vec2, radius:float) {
-    glBegin(GL_LINE_LOOP);
-    for circle(position, radius) |v| {
-        glVertex(v);
+    unsafe {
+        glBegin(GL_LINE_LOOP);
+        for circle(position, radius) |v| {
+            glVertex(v);
+        }
+        glEnd();
     }
-    glEnd();
 }
 
 fn fillCircle(position: Vec2, radius: float) {
-    glBegin(GL_TRIANGLE_FAN);
-    for circle(position, radius) |v| {
-        glVertex(v);
+    unsafe {
+        glBegin(GL_TRIANGLE_FAN);
+        for circle(position, radius) |v| {
+            glVertex(v);
+        }
+        glEnd();
     }
-    glEnd();
 }
 
 fn drawGame(game: &Game) {
-    glClear(GL_COLOR_BUFFER_BIT);
+    unsafe { glClear(GL_COLOR_BUFFER_BIT); }
 
     for game.objects.each |object| {
         object.draw(game);
@@ -373,11 +377,13 @@ fn main() {
     init(&[InitEverything]);
     set_video_mode(640,480,32,&[],&[DoubleBuf,OpenGL]);
 
-    // Initialize graphics
-    glMatrixMode(GL_PROJECTION);
-    glOrtho(0.0,640.0,480.0,0.0,0.0,1.0);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    unsafe {
+        // Initialize graphics
+        glMatrixMode(GL_PROJECTION);
+        glOrtho(0.0,640.0,480.0,0.0,0.0,1.0);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+    }
 
     let game = setupGame();
 
