@@ -222,15 +222,14 @@ fn between<T:Ord>(x:T, a:T, b:T) -> bool { x > a && x < b }
 fn distance(a:Vec2,b:Vec2) -> float { (a-b).length() }
 
 fn handleOpponent(game:&mut Game) {
-    let defenceSpeed = 2.;
-    let attackSpeed = 5.;
+    let defenceSpeed = 3.;
+    let attackSpeed = 10.;
     let position = game.opponent.position;
     let goal = Vec2(game.field.x, game.field.y*0.5);
     let puck = game.puck;
     let goalDirection = (position - goal).normalizeOrZero();
     let puckDirection = (position - puck.position).normalizeOrZero();
     let puckDistance = (position - puck.position).length();
-    let desiredPosition = (puck.position + goal) * 0.5; // Right between puck and goal
     let desiredVelocity = if // Should we dash forward (attack) ?
            goalDirection.dot(puckDirection) < 0.
         && puckDistance < 100.
@@ -242,9 +241,9 @@ fn handleOpponent(game:&mut Game) {
         && distance(game.player.position,puck.position) / distance(position,puck.position) > 2.0
     { velocityTowards(position, puck.position, defenceSpeed) }
     else // Should we stand between puck and goal (defend) ?
-    { velocityTowards(position, desiredPosition, defenceSpeed) };
+    { velocityTowards(position, (puck.position + goal) * 0.5, defenceSpeed) };
 
-    game.opponent.velocity = game.opponent.velocity * 0.85 + desiredVelocity * 0.15;
+    game.opponent.velocity = game.opponent.velocity * 0.80 + desiredVelocity * 0.15;
 }
 
 fn velocityTowards(source:Vec2, destination:Vec2, speed:float) -> Vec2 {
