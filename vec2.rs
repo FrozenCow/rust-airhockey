@@ -63,4 +63,7 @@ impl Vec2 {
     pure fn normalizeOrZero(&self) -> Vec2 {
         self.normalizeOr(Zero)
     }
+    pure fn dot(&self, b: Vec2) -> float {
+        self.x * b.x + self.y * b.y
+    }
 }
