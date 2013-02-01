@@ -47,7 +47,17 @@ struct Puck {
 }
 impl Puck: GameObject {
     fn update(&mut self,game: &mut Game) {
+        // Limit velocity of puck
+        let speed = self.velocity.length();
+        let direction = self.velocity.normalizeOrZero();
+        self.velocity = direction * if speed > 30. { 30. } else { speed };
+
+        // Apply velocity
         self.position += self.velocity;
+
+        // Apply damping
+        self.velocity *= 0.99;
+
     }
     fn draw(&self, game: &Game) {
         fillCircle(self.position, self.radius);
@@ -57,11 +67,14 @@ impl Puck: GameObject {
 struct Game {
     objects: GameObjectManager,
     player: @mut Paddle,
+    playerScore: uint,
     opponent: @mut Paddle,
+    opponentScore: uint,
     puck: @mut Puck,
     paddles: ~[@mut Paddle],
     field: Vec2,
-    mouse: Vec2,
+    goalSize: float,
+    mouse: Vec2
 }
 
 fn loadTexture() {
@@ -168,7 +181,16 @@ fn drawGame(game: &mut Game) {
 
     strokeCircle(game.mouse, 10.0);
 
+    drawScore(game.playerScore, Vec2(10.,10.), Vec2(10.,0.));
+    drawScore(game.opponentScore, Vec2(game.field.x-10.,10.), Vec2(-10.,0.));
+
     swap_buffers();
+}
+
+fn drawScore(score: uint, position: Vec2, direction: Vec2) {
+    for core::uint::range(0,score) |index| {
+        fillCircle(position+direction*(index as float), 5.);
+    }
 }
 
 fn updateGame(game:&mut Game) {
@@ -177,7 +199,7 @@ fn updateGame(game:&mut Game) {
     }
 }
 
-fn handleControls(game:@mut Game) {
+fn handleControls(game:&mut Game) {
     let diff = game.mouse - game.player.position;
     let dist = diff.length();
     let maxSpeed = 50.;
@@ -186,17 +208,52 @@ fn handleControls(game:@mut Game) {
 }
 
 fn handleCollision(game:&mut Game) {
+    // Handle paddle - puck collision
     for game.paddles.each |paddle| {
         let diff = (game.puck.position - paddle.position);
         if (diff.length() < game.puck.radius+paddle.radius) {
             game.puck.velocity -= getBounceImpact(diff.normalizeOrZero(), game.puck.velocity - paddle.velocity, 0.9);
         }
     };
-    match getSurface(game.puck) {
+    // Handle field boundaries - puck collision
+    match getSurface(game, game.puck) {
         Some(surface) => {
             game.puck.velocity -= getBounceImpact(surface, game.puck.velocity, 0.9);
         }
         None => {}
+    }
+}
+
+fn handleOpponent(game:&mut Game) {
+    let speed = 3.;
+    let opponent = game.opponent;
+    let goal = Vec2(game.field.x, game.field.y*0.5);
+    let puck = game.puck;
+
+    let desiredPosition = (puck.position + goal) * 0.5; // Right between puck and goal
+    opponent.velocity = velocityTowards(opponent.position, desiredPosition, speed);
+}
+
+fn velocityTowards(source:Vec2, destination:Vec2, speed:float) -> Vec2 {
+    let diff = destination - source;
+    let distance = diff.length();
+    let direction = diff.normalizeOrZero();
+    if distance < speed { direction * distance }
+    else { direction * speed }
+}
+
+fn handleGoals(game:&mut Game) {
+    let p = game.puck;
+    if p.position.y > game.field.y*0.5-game.goalSize*0.5 && p.position.y < game.field.y*0.5+game.goalSize*0.5 {
+        if p.position.x < 0. && p.velocity.x < 0. {
+            p.position = game.field*0.5;
+            p.velocity = Zero;
+            game.opponentScore = game.opponentScore + 1;
+        } else if p.position.x > game.field.x && p.velocity.x > 0. {
+            p.position = game.field*0.5;
+            p.velocity = Zero;
+            game.playerScore = game.playerScore + 1;
+        }
     }
 }
 
@@ -209,12 +266,95 @@ fn getBounceImpact(surface:Vec2, velocity:Vec2, bounciness:float) -> Vec2 {
     }
 }
 
-fn getSurface(p:&Puck) -> Option<Vec2> {
-    if p.position.x < p.radius { Some(Vec2(1.,0.)) }
-    else if p.position.x > 640.-p.radius { Some(Vec2(-1.,0.)) }
+fn getSurface(game: &Game, p:&Puck) -> Option<Vec2> {
+    // Handle goals (part of the boundaries where collision is disabled)
+    if p.position.y > game.field.y*0.5-game.goalSize*0.5 && p.position.y < game.field.y*0.5+game.goalSize*0.5 { None }
+    // Handle walls
+    else if p.position.x < p.radius { Some(Vec2(1.,0.)) }
+    else if p.position.x > game.field.x-p.radius { Some(Vec2(-1.,0.)) }
     else if (p.position.y < p.radius) { Some(Vec2(0.,1.)) }
-    else if (p.position.y > 480.-p.radius) { Some(Vec2(0.,-1.)) }
+    else if (p.position.y > game.field.y-p.radius) { Some(Vec2(0.,-1.)) }
+    // Nothing else
     else { None }
+}
+
+fn setupGame() -> ~mut Game {
+    let field = Vec2(640.,480.);
+
+    let player: @mut Paddle = @mut Paddle {
+        position: Vec2(100., field.y*0.5),
+        velocity: Vec2(0.,0.),
+        radius: 40.
+    };
+
+    let opponent: @mut Paddle = @mut Paddle {
+        position: Vec2(field.x-100., field.y*0.5),
+        velocity: Vec2(0.,0.),
+        radius: 40.
+    };
+
+    let puck: @mut Puck = @mut Puck {
+        position: Vec2{x:320.,y:240.},
+        velocity: Zero,
+        radius: 30.
+    };
+
+    let goalSize = 250.;
+
+    let game = ~mut Game {
+        objects: GameObjectManager(),
+        field: Vec2(640.,480.),
+        goalSize: goalSize,
+        mouse: Vec2(0.,0.),
+        player: player,
+        playerScore: 0,
+        opponent: opponent,
+        opponentScore: 0,
+        puck: puck,
+        paddles: ~[
+            player,
+            opponent,
+            @mut Paddle { position: Vec2(0., 480.*0.5-goalSize*0.5), velocity: Zero, radius: 20. },
+            @mut Paddle { position: Vec2(0., 480.*0.5+goalSize*0.5), velocity: Zero, radius: 20. },
+            @mut Paddle { position: Vec2(640., 480.*0.5-goalSize*0.5), velocity: Zero, radius: 20. },
+            @mut Paddle { position: Vec2(640., 480.*0.5+goalSize*0.5), velocity: Zero, radius: 20. }
+        ]
+    };
+    for each_mut(game.paddles) |&paddle| {
+        game.objects.add(paddle as @GameObject);
+    }
+    game.objects.add(puck as @GameObject);
+    game.objects.handlePending();
+
+    move game
+}
+
+fn gameLoop(game: &mut Game, update: fn(&mut Game) -> bool) {
+    let mut running = true;
+    while running {
+        loop {
+            let event = poll_event();
+            match event {
+                KeyDownEvent(k) => {
+                    if (k.keycode == sdl::keyboard::SDLKEscape) {
+                        running = false;
+                    }
+                    io::println(fmt!("%? %? %?", k.keycode, k.modifier, k.state));
+                }
+                KeyUpEvent(k) => {
+                    io::println(fmt!("%? %? %?", k.keycode, k.modifier, k.state));
+                }
+                MouseMotionEvent(m) => {
+                    game.mouse = Vec2(m.x as float, m.y as float);
+                }
+                QuitEvent => {
+                    running = false;
+                }
+                NoEvent => { break; }
+            }
+        }
+        running = running && update(game);
+    }
 }
 
 fn main() {
@@ -227,70 +367,16 @@ fn main() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    let player: @mut Paddle = @mut Paddle {
-        position: Vec2(100., 100.),
-        velocity: Vec2(0.,0.),
-        radius: 50.
-    };
+    let game = setupGame();
 
-    let opponent: @mut Paddle = @mut Paddle {
-        position: Vec2(540., 100.),
-        velocity: Vec2(0.,0.),
-        radius: 50.
-    };
-
-    let puck: @mut Puck = @mut Puck {
-        position: Vec2{x:320.,y:240.},
-        velocity: Zero,
-        radius: 30.
-    };
-
-    let game = @mut Game {
-        objects: GameObjectManager(),
-        field: Vec2(640.,480.),
-        mouse: Vec2(0.,0.),
-        player: player,
-        opponent: opponent,
-        puck: puck,
-        paddles: ~[player, opponent]
-    };
-
-    unsafe {
-        game.objects.add(player as @GameObject);
-        game.objects.add(puck as @GameObject);
-        game.objects.add(opponent as @GameObject);
-
+    for gameLoop(game) |game|{
+        handleControls(game);
+        updateGame(game);
+        handleOpponent(game);
+        handleCollision(game);
+        handleGoals(game);
+        drawGame(game);
         game.objects.handlePending();
-    
-        let mut running = true;
-        while running {
-            loop {
-                let event = poll_event();
-                match event {
-                    KeyDownEvent(k) => {
-                        if (k.keycode == sdl::keyboard::SDLKEscape) {
-                            running = false;
-                        }
-                        io::println(fmt!("%? %? %?", k.keycode, k.modifier, k.state));
-                    }
-                    KeyUpEvent(k) => {
-                        io::println(fmt!("%? %? %?", k.keycode, k.modifier, k.state));
-                    }
-                    MouseMotionEvent(m) => {
-                        game.mouse = Vec2(m.x as float, m.y as float);
-                    }
-                    QuitEvent => {
-                        running = false;
-                    }
-                    NoEvent => { break; }
-                }
-            }
-            handleControls(game);
-            updateGame(game);
-            handleCollision(game);
-            drawGame(game);
-            game.objects.handlePending();
-        };
-    }
+    };
     quit();
 }
