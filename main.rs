@@ -16,7 +16,6 @@ use pendinglist::*;
 //use option::{Some, None};
 use vec2::*;
 
-
 unsafe fn glVertex(v: Vec2) {
     glVertex2f(v.x as f32, v.y as f32);
 }
@@ -26,11 +25,14 @@ pub trait GameObject {
     fn draw(&self, game: &Game);
 }
 
-
-struct Paddle {
+struct PhysicalCircle {
     position: Vec2,
     velocity: Vec2,
     radius: float
+}
+struct Paddle(PhysicalCircle);
+fn newPaddle(position:Vec2) -> Paddle {
+    Paddle(PhysicalCircle { position: position, velocity: Zero, radius: 40. })
 }
 impl Paddle : GameObject {
     fn update(&mut self,game: &mut Game) {
@@ -41,10 +43,9 @@ impl Paddle : GameObject {
     }
 }
 
-struct Puck {
-    position: Vec2,
-    velocity: Vec2,
-    radius: float
+struct Puck(PhysicalCircle);
+fn newPuck(position:Vec2) -> Puck {
+    Puck(PhysicalCircle { position: position, velocity: Zero, radius: 30. })
 }
 impl Puck: GameObject {
     fn update(&mut self,game: &mut Game) {
@@ -63,6 +64,10 @@ impl Puck: GameObject {
     fn draw(&self, game: &Game) {
         fillCircle(self.position, self.radius);
     }
+}
+
+fn newPole(position:Vec2) -> Paddle {
+    Paddle(PhysicalCircle { position: position, velocity: Zero, radius: 20. })
 }
 
 struct Game {
@@ -240,23 +245,10 @@ fn getSurface(game: &Game, p:&Puck) -> Option<Vec2> {
 fn setupGame() -> ~mut Game {
     let field = Vec2(640.,480.);
 
-    let player: @mut Paddle = @mut Paddle {
-        position: Vec2(100., field.y*0.5),
-        velocity: Vec2(0.,0.),
-        radius: 40.
-    };
+    let player = @mut newPaddle(Vec2(100., field.y*0.5));
+    let opponent = @mut newPaddle(Vec2(field.x-100., field.y*0.5));
 
-    let opponent: @mut Paddle = @mut Paddle {
-        position: Vec2(field.x-100., field.y*0.5),
-        velocity: Vec2(0.,0.),
-        radius: 40.
-    };
-
-    let puck: @mut Puck = @mut Puck {
-        position: Vec2{x:320.,y:240.},
-        velocity: Zero,
-        radius: 30.
-    };
+    let puck = @mut newPuck(Vec2{x:320.,y:240.});
 
     let goalSize = 250.;
 
@@ -273,10 +265,10 @@ fn setupGame() -> ~mut Game {
         paddles: ~[
             player,
             opponent,
-            @mut Paddle { position: Vec2(0., 480.*0.5-goalSize*0.5), velocity: Zero, radius: 20. },
-            @mut Paddle { position: Vec2(0., 480.*0.5+goalSize*0.5), velocity: Zero, radius: 20. },
-            @mut Paddle { position: Vec2(640., 480.*0.5-goalSize*0.5), velocity: Zero, radius: 20. },
-            @mut Paddle { position: Vec2(640., 480.*0.5+goalSize*0.5), velocity: Zero, radius: 20. }
+            @mut newPole(Vec2(0., 480.*0.5-goalSize*0.5)),
+            @mut newPole(Vec2(0., 480.*0.5+goalSize*0.5)),
+            @mut newPole(Vec2(640., 480.*0.5-goalSize*0.5)),
+            @mut newPole(Vec2(640., 480.*0.5+goalSize*0.5))
         ]
     };
 
