@@ -10,7 +10,6 @@ use core::vec::*;
 use sdl::sdl::*;
 use sdl::video::*;
 use sdl::event::*;
-use core::dvec::DVec;
 use gl::*;
 //use option::{Some, None};
 use vec2::*;
@@ -77,60 +76,50 @@ struct Game {
 }
 
 struct GameObjectManager {
-    objects: DVec<@GameObject>,
-    pendingAdd: DVec<@GameObject>,
-    pendingRemove: DVec<@GameObject>
+    objects: ~[@GameObject],
+    pendingAdd: ~[@GameObject],
+    pendingRemove: ~[@GameObject]
 }
 fn GameObjectManager() -> GameObjectManager {
     GameObjectManager {
-        objects: DVec(),
-        pendingAdd: DVec(),
-        pendingRemove: DVec()
+        objects: ~[],
+        pendingAdd: ~[],
+        pendingRemove: ~[]
     }
 }
 impl GameObjectManager {
-    fn add(&self,gameObject: @GameObject) {
+    fn add(&mut self,gameObject: @GameObject) {
         self.pendingAdd.push(gameObject);
     }
-    fn remove(&self,gameObject: @GameObject) {
+    fn remove(&mut self,gameObject: @GameObject) {
         self.pendingRemove.push(gameObject);
     }
-    fn handlePending(&self,) {
+    fn handlePending(&mut self) {
         while self.pendingAdd.len() > 0 {
             self.objects.push(self.pendingAdd.pop());
         }
 
         while self.pendingRemove.len() > 0 {
-            remove_gameobject(&self.objects,self.pendingAdd.pop());
+            remove_gameobject(&mut self.objects,self.pendingAdd.pop());
         }
     }
-    pub fn each_mut(&self,f: fn(elem: &mut @GameObject) -> bool) {
-        do self.objects.check_out |v| {
-            let mut v:~[@GameObject] = move v;
-            each_mut(v,f);
-            self.objects.give_back(move v);
-        }
+    pub fn each_mut(&mut self,f: fn(elem: &mut @GameObject) -> bool) {
+        each_mut(self.objects,f);
     }
 }
 impl GameObjectManager: iter::BaseIter<@GameObject> {
     pure fn each(&self, blk: fn(v: &@GameObject) -> bool) { self.objects.each(blk) }
     pure fn size_hint(&self) -> Option<uint> { self.objects.size_hint() }
 }
-fn remove_gameobject(xs:&DVec<@GameObject>, x:@GameObject) -> Option<uint> {
-    unsafe {
-        do xs.check_out |v| {
-            let mut v:~[@GameObject] = move v;
-            let result = match position(v, |&y| { core::ptr::ref_eq(&x,&y) }) {
-                None => None,
-                Some(index) => {
-                    v.remove(index);
-                    Some(index)
-                }
-            };
-            xs.give_back(move v);
-            result
+fn remove_gameobject(v:&mut ~[@GameObject], x:@GameObject) -> Option<uint> {
+    let result = match position(*v, |&y| { core::ptr::ref_eq(&x,&y) }) {
+        None => None,
+        Some(index) => {
+            remove(v,index);
+            Some(index)
         }
-    }
+    };
+    result
 }
 
 
@@ -336,13 +325,18 @@ fn setupGame() -> ~mut Game {
             @mut Paddle { position: Vec2(640., 480.*0.5+goalSize*0.5), velocity: Zero, radius: 20. }
         ]
     };
-    for each_mut(game.paddles) |&paddle| {
-        game.objects.add(paddle as @GameObject);
-    }
+
+    addPaddles(game);
     game.objects.add(puck as @GameObject);
     game.objects.handlePending();
 
     move game
+}
+
+fn addPaddles(game:&mut Game) {
+    for game.paddles.each |&paddle| {
+        game.objects.add(paddle as @GameObject);
+    }
 }
 
 fn gameLoop(game: &mut Game, update: fn(&mut Game) -> bool) {
