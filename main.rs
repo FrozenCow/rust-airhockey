@@ -35,10 +35,10 @@ fn newPaddle(position:Vec2) -> Paddle {
     Paddle(PhysicalCircle { position: position, velocity: Zero, radius: 40. })
 }
 impl Paddle : GameObject {
-    fn update(&mut self,game: &mut Game) {
+    fn update(&mut self,_:&mut Game) {
         self.position += self.velocity;
     }
-    fn draw(&self, game: &Game) {
+    fn draw(&self,_:&Game) {
         fillCircle(self.position, self.radius);
     }
 }
@@ -48,7 +48,7 @@ fn newPuck(position:Vec2) -> Puck {
     Puck(PhysicalCircle { position: position, velocity: Zero, radius: 30. })
 }
 impl Puck: GameObject {
-    fn update(&mut self,game: &mut Game) {
+    fn update(&mut self,_: &mut Game) {
         // Limit velocity of puck
         let speed = self.velocity.length();
         let direction = self.velocity.normalizeOrZero();
@@ -61,7 +61,7 @@ impl Puck: GameObject {
         self.velocity *= 0.99;
 
     }
-    fn draw(&self, game: &Game) {
+    fn draw(&self, _: &Game) {
         fillCircle(self.position, self.radius);
     }
 }
@@ -247,7 +247,6 @@ fn setupGame() -> ~mut Game {
 
     let player = @mut newPaddle(Vec2(100., field.y*0.5));
     let opponent = @mut newPaddle(Vec2(field.x-100., field.y*0.5));
-
     let puck = @mut newPuck(Vec2{x:320.,y:240.});
 
     let goalSize = 250.;
