@@ -1,6 +1,7 @@
 extern mod sdl;
 mod gl;
 mod vec2;
+mod pendinglist;
 
 use core::float::*;
 use core::num::Num::*;
@@ -11,6 +12,7 @@ use sdl::sdl::*;
 use sdl::video::*;
 use sdl::event::*;
 use gl::*;
+use pendinglist::*;
 //use option::{Some, None};
 use vec2::*;
 
@@ -19,10 +21,11 @@ unsafe fn glVertex(v: Vec2) {
     glVertex2f(v.x as f32, v.y as f32);
 }
 
-trait GameObject {
+pub trait GameObject {
     fn update(&mut self, game: &mut Game);
     fn draw(&self, game: &Game);
 }
+
 
 struct Paddle {
     position: Vec2,
@@ -63,7 +66,7 @@ impl Puck: GameObject {
 }
 
 struct Game {
-    objects: GameObjectManager,
+    objects: PendingList<GameObject>,
     player: @mut Paddle,
     playerScore: uint,
     opponent: @mut Paddle,
@@ -74,55 +77,6 @@ struct Game {
     goalSize: float,
     mouse: Vec2
 }
-
-struct GameObjectManager {
-    objects: ~[@GameObject],
-    pendingAdd: ~[@GameObject],
-    pendingRemove: ~[@GameObject]
-}
-fn GameObjectManager() -> GameObjectManager {
-    GameObjectManager {
-        objects: ~[],
-        pendingAdd: ~[],
-        pendingRemove: ~[]
-    }
-}
-impl GameObjectManager {
-    fn add(&mut self,gameObject: @GameObject) {
-        self.pendingAdd.push(gameObject);
-    }
-    fn remove(&mut self,gameObject: @GameObject) {
-        self.pendingRemove.push(gameObject);
-    }
-    fn handlePending(&mut self) {
-        while self.pendingAdd.len() > 0 {
-            self.objects.push(self.pendingAdd.pop());
-        }
-
-        while self.pendingRemove.len() > 0 {
-            remove_gameobject(&mut self.objects,self.pendingAdd.pop());
-        }
-    }
-    pub fn each_mut(&mut self,f: fn(elem: &mut @GameObject) -> bool) {
-        each_mut(self.objects,f);
-    }
-}
-impl GameObjectManager: iter::BaseIter<@GameObject> {
-    pure fn each(&self, blk: fn(v: &@GameObject) -> bool) { self.objects.each(blk) }
-    pure fn size_hint(&self) -> Option<uint> { self.objects.size_hint() }
-}
-fn remove_gameobject(v:&mut ~[@GameObject], x:@GameObject) -> Option<uint> {
-    let result = match position(*v, |&y| { core::ptr::ref_eq(&x,&y) }) {
-        None => None,
-        Some(index) => {
-            remove(v,index);
-            Some(index)
-        }
-    };
-    result
-}
-
-
 
 fn circle(position:Vec2, radius:float, f:fn(Vec2) -> bool) {
     let vertexCount = 20;
@@ -307,7 +261,7 @@ fn setupGame() -> ~mut Game {
     let goalSize = 250.;
 
     let game = ~mut Game {
-        objects: GameObjectManager(),
+        objects: PendingList(),
         field: Vec2(640.,480.),
         goalSize: goalSize,
         mouse: Vec2(0.,0.),
