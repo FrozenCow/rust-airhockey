@@ -293,31 +293,33 @@ fn addPaddles(game:&mut Game) {
     }
 }
 
-fn gameLoop(game: &mut Game, update: fn(&mut Game) -> bool) {
-    let mut running = true;
-    while running {
-        loop {
-            let event = poll_event();
-            match event {
-                KeyDownEvent(k) => {
-                    if (k.keycode == sdl::keyboard::SDLKEscape) {
-                        running = false;
-                    }
-                    io::println(fmt!("%? %? %?", k.keycode, k.modifier, k.state));
+fn handleSDLEvents(game: &mut Game) -> bool {
+    loop {
+        let event = poll_event();
+        match event {
+            KeyDownEvent(k) => {
+                if (k.keycode == sdl::keyboard::SDLKEscape) {
+                    return false;
                 }
-                KeyUpEvent(k) => {
-                    io::println(fmt!("%? %? %?", k.keycode, k.modifier, k.state));
-                }
-                MouseMotionEvent(m) => {
-                    game.mouse = Vec2(m.x as float, m.y as float);
-                }
-                QuitEvent => {
-                    running = false;
-                }
-                NoEvent => { break; }
+                io::println(fmt!("%? %? %?", k.keycode, k.modifier, k.state));
             }
+            KeyUpEvent(k) => {
+                io::println(fmt!("%? %? %?", k.keycode, k.modifier, k.state));
+            }
+            MouseMotionEvent(m) => {
+                game.mouse = Vec2(m.x as float, m.y as float);
+            }
+            QuitEvent => {
+                return false;
+            }
+            NoEvent => { break; }
         }
-        running = running && update(game);
+    }
+    return true;
+}
+
+fn gameLoop(game: &mut Game, update: fn(&mut Game) -> bool) {
+    while handleSDLEvents(game) && update(game) {
     }
 }
 
