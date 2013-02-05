@@ -29,7 +29,7 @@ pub impl<T> PendingList<T> {
             remove_elem(&mut self.objects,self.pendingRemove.pop());
         }
     }
-    pub fn each_mut(&mut self,f: fn(elem: &mut T) -> bool) {
+    pub fn each_mut(&mut self,f: &fn(elem: &mut T) -> bool) {
         each_mut(self.objects,f);
     }
 }
