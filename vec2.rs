@@ -1,5 +1,5 @@
 use core::float::*;
-use core::num::Num::*;
+use core::num::*;
 use core::ptr::ref_eq;
 use core::cmp::Eq;
 use core::vec::*;
@@ -13,31 +13,31 @@ const One:Vec2 = Vec2 { x: 1., y: 1. };
 const XAxis:Vec2 = Vec2 { x: 1., y: 0. };
 const YAxis:Vec2 = Vec2 { x: 0., y: 1. };
 
-impl Vec2: Add<Vec2,Vec2> {
+impl Add<Vec2,Vec2> for Vec2 {
     pure fn add(&self, rhs: &Vec2) -> Vec2 {
         Vec2 {x: self.x + rhs.x, y: self.y + rhs.y}
     }
 }
 
-impl Vec2: Sub<Vec2,Vec2> {
+impl Sub<Vec2,Vec2> for Vec2 {
     pure fn sub(&self, rhs: &Vec2) -> Vec2 {
         Vec2 {x: self.x - rhs.x, y: self.y - rhs.y}
     }
 }
 
-impl Vec2: Mul<float,Vec2> {
+impl Mul<float,Vec2> for Vec2 {
     pure fn mul(&self, rhs: &float) -> Vec2 {
         Vec2 {x: self.x * (*rhs), y: self.y * (*rhs)}
     }
 }
 
-impl Vec2: Div<float,Vec2> {
+impl Div<float,Vec2> for Vec2 {
     pure fn div(&self, rhs: &float) -> Vec2 {
         Vec2 {x: self.x / (*rhs), y: self.y / (*rhs)}
     }
 }
 
-impl Vec2: Neg<Vec2> {
+impl Neg<Vec2> for Vec2 {
     pure fn neg(&self) -> Vec2 {
         Vec2 {x: -self.x, y: -self.y}
     }

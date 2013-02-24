@@ -4,7 +4,7 @@ mod vec2;
 mod pendinglist;
 
 use core::float::*;
-use core::num::Num::*;
+use core::num::*;
 use core::ptr::ref_eq;
 use core::cmp::Eq;
 use core::vec::*;
@@ -21,7 +21,7 @@ unsafe fn glVertex(v: Vec2) {
 }
 
 pub trait GameObject {
-    fn update(&mut self, game: &mut Game);
+    fn update(&mut self);
     fn draw(&self, game: &Game);
 }
 
@@ -34,8 +34,9 @@ struct Paddle(PhysicalCircle);
 fn newPaddle(position:Vec2) -> @mut Paddle {
     @mut Paddle(PhysicalCircle { position: position, velocity: Zero, radius: 40. })
 }
-impl Paddle : GameObject {
-    fn update(&mut self,_:&mut Game) {
+
+impl GameObject for Paddle {
+    fn update(&mut self) {
         self.position += self.velocity;
     }
     fn draw(&self,_:&Game) {
@@ -47,8 +48,8 @@ struct Puck(PhysicalCircle);
 fn newPuck(position:Vec2) -> @mut Puck {
     @mut Puck(PhysicalCircle { position: position, velocity: Zero, radius: 30. })
 }
-impl Puck: GameObject {
-    fn update(&mut self,_: &mut Game) {
+impl GameObject for Puck {
+    fn update(&mut self) {
         // Limit velocity of puck
         let speed = self.velocity.length();
         let direction = self.velocity.normalizeOrZero();
@@ -86,7 +87,7 @@ struct Game {
 fn circle(position:Vec2, radius:float, f:&fn(Vec2) -> bool) {
     let vertexCount = 20;
     int::range(0, vertexCount, |i| {
-        let angle = (float::consts::pi*2./from_int(vertexCount)) * from_int(i);
+        let mut angle = (float::consts::pi * 2.0 / (vertexCount as float)) * (i as float);
         let p = Vec2 {x: float::cos(angle), y: float::sin(angle)};
         let v = p * radius + position;
         f(v)
@@ -141,7 +142,7 @@ fn drawScore(score: uint, position: Vec2, direction: Vec2) {
 
 fn updateGame(game:&mut Game) {
     for game.objects.each_mut |object| {
-        object.update(game);
+        object.update();
     }
 }
 
@@ -275,7 +276,7 @@ fn setupGame() -> ~mut Game {
     game.objects.add(puck as @GameObject);
     game.objects.handlePending();
 
-    move game
+    game
 }
 
 fn addPaddles(game:&mut Game) {
@@ -288,22 +289,20 @@ fn handleSDLEvents(game: &mut Game) -> bool {
     loop {
         let event = poll_event();
         match event {
-            KeyDownEvent(k) => {
-                if (k.keycode == sdl::keyboard::SDLKEscape) {
+            KeyEvent(keycode,state,wrap_mod_state,unicode) => {
+                if (keycode == EscapeKey) {
                     return false;
                 }
-                io::println(fmt!("%? %? %?", k.keycode, k.modifier, k.state));
+                io::println(fmt!("%? %? %? %?", keycode, state, wrap_mod_state, unicode));
             }
-            KeyUpEvent(k) => {
-                io::println(fmt!("%? %? %?", k.keycode, k.modifier, k.state));
-            }
-            MouseMotionEvent(m) => {
-                game.mouse = Vec2(m.x as float, m.y as float);
+            MouseMotionEvent(_,x,y,_,_) => {
+                game.mouse = Vec2(x as float, y as float);
             }
             QuitEvent => {
                 return false;
             }
             NoEvent => { break; }
+            _ => { }
         }
     }
     return true;

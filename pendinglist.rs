@@ -33,7 +33,7 @@ pub impl<T> PendingList<T> {
         each_mut(self.objects,f);
     }
 }
-pub impl<T> PendingList<T>: iter::BaseIter<T> {
+pub impl<T> iter::BaseIter<T> for PendingList<T> {
     pure fn each(&self, blk: fn(v: &T) -> bool) { self.objects.each(blk) }
     pure fn size_hint(&self) -> Option<uint> { self.objects.size_hint() }
 }
