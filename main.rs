@@ -243,7 +243,7 @@ fn getSurface(game: &Game, p:&Puck) -> Option<Vec2> {
     else { None }
 }
 
-fn setupGame() -> ~mut Game {
+fn setupGame() -> ~Game {
     let field = Vec2(640.,480.);
 
     let player = newPaddle(Vec2(100., field.y*0.5));
@@ -252,7 +252,7 @@ fn setupGame() -> ~mut Game {
 
     let goalSize = 250.;
 
-    let game = ~mut Game {
+    let mut game = ~Game {
         objects: PendingList(),
         field: Vec2(640.,480.),
         goalSize: goalSize,
@@ -314,27 +314,30 @@ fn gameLoop(game: &mut Game, update: fn(&mut Game) -> bool) {
 }
 
 fn main() {
-    init(&[InitEverything]);
-    set_video_mode(640,480,32,&[],&[DoubleBuf,OpenGL]);
+    do sdl::start {
+        init(&[InitEverything]);
+        set_video_mode(640,480,32,&[],&[DoubleBuf,OpenGL]);
 
-    unsafe {
-        // Initialize graphics
-        glMatrixMode(GL_PROJECTION);
-        glOrtho(0.0,640.0,480.0,0.0,0.0,1.0);
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
+        unsafe {
+            // Initialize graphics
+            glMatrixMode(GL_PROJECTION);
+            glOrtho(0.0,640.0,480.0,0.0,0.0,1.0);
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+        }
+    
+        let mut game = setupGame();
+
+        for gameLoop(game) |game|{
+            handleControls(game);
+            updateGame(game);
+            handleOpponent(game);
+            handleCollision(game);
+            handleGoals(game);
+            drawGame(game);
+            game.objects.handlePending();
+        };
+
+        quit();
     }
-
-    let game = setupGame();
-
-    for gameLoop(game) |game|{
-        handleControls(game);
-        updateGame(game);
-        handleOpponent(game);
-        handleCollision(game);
-        handleGoals(game);
-        drawGame(game);
-        game.objects.handlePending();
-    };
-    quit();
 }
