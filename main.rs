@@ -314,27 +314,30 @@ fn gameLoop(game: &mut Game, update: fn(&mut Game) -> bool) {
 }
 
 fn main() {
-    init(&[InitEverything]);
-    set_video_mode(640,480,32,&[],&[DoubleBuf,OpenGL]);
+    do sdl::start {
+        init(&[InitEverything]);
+        set_video_mode(640,480,32,&[],&[DoubleBuf,OpenGL]);
 
-    unsafe {
-        // Initialize graphics
-        glMatrixMode(GL_PROJECTION);
-        glOrtho(0.0,640.0,480.0,0.0,0.0,1.0);
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
+        unsafe {
+            // Initialize graphics
+            glMatrixMode(GL_PROJECTION);
+            glOrtho(0.0,640.0,480.0,0.0,0.0,1.0);
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+        }
+    
+        let mut game = setupGame();
+
+        for gameLoop(game) |game|{
+            handleControls(game);
+            updateGame(game);
+            handleOpponent(game);
+            handleCollision(game);
+            handleGoals(game);
+            drawGame(game);
+            game.objects.handlePending();
+        };
+
+        quit();
     }
-
-    let mut game = setupGame();
-
-    for gameLoop(game) |game|{
-        handleControls(game);
-        updateGame(game);
-        handleOpponent(game);
-        handleCollision(game);
-        handleGoals(game);
-        drawGame(game);
-        game.objects.handlePending();
-    };
-    quit();
 }
