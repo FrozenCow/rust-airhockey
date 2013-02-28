@@ -243,7 +243,7 @@ fn getSurface(game: &Game, p:&Puck) -> Option<Vec2> {
     else { None }
 }
 
-fn setupGame() -> ~mut Game {
+fn setupGame() -> ~Game {
     let field = Vec2(640.,480.);
 
     let player = newPaddle(Vec2(100., field.y*0.5));
@@ -252,7 +252,7 @@ fn setupGame() -> ~mut Game {
 
     let goalSize = 250.;
 
-    let game = ~mut Game {
+    let mut game = ~Game {
         objects: PendingList(),
         field: Vec2(640.,480.),
         goalSize: goalSize,
@@ -325,7 +325,7 @@ fn main() {
         glLoadIdentity();
     }
 
-    let game = setupGame();
+    let mut game = setupGame();
 
     for gameLoop(game) |game|{
         handleControls(game);
