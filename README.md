@@ -6,16 +6,28 @@ This project might be of use for others: it shows handling structs (Paddle, Puck
 
 ## Usage
 
-rust-airhockey requires a very recent version of the Rust compiler. I used rustc 0.6 to compile the project.
+rust-airhockey requires rustc 0.6 to compile the project.
 
-To compile rust-airhockey first install [rust-sdl](https://github.com/brson/rust-sdl):
+To compile rust-airhockey use rustpkg:
+
+	$ rustpkg install
+
+After building using rustpkg the binary is available here:
+
+	~/.rustpkg/bin/airhockey-*-0.5.0
+
+[Read more about rustpkg](https://github.com/mozilla/rust/wiki/Rustpkg)
+
+
+
+Alternatively you can build rust-airhockey locally. First install rust-sdl:
 
     $ rustpkg install https://github.com/brson/rust-sdl
 
 Now you can compile rust-airhockey:
 
-    $ rustc main.rs
+    $ rustc airhockey.rs
 
 To run rust-airhockey:
 
-    $ ./main
+    $ ./airhockey
