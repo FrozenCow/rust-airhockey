@@ -39,7 +39,7 @@ impl Neg<Vec2> for Vec2 {
     }
 }
 
-impl Vec2 {
+pub impl Vec2 {
     fn length(&self) -> float {
         float::sqrt(self.length2())
     }
