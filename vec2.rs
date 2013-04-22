@@ -1,7 +1,3 @@
-use core::float::*;
-use core::num::*;
-use core::ptr::ref_eq;
-use core::cmp::Eq;
 use core::vec::*;
 
 pub struct Vec2 { x:float, y:float }

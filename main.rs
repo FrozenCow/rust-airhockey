@@ -1,9 +1,6 @@
 extern mod sdl;
 
-use core::float::*;
 use core::num::*;
-use core::ptr::ref_eq;
-use core::cmp::Eq;
 use core::vec::*;
 use sdl::sdl::*;
 use sdl::video::*;
