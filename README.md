@@ -6,11 +6,11 @@ This project might be of use for others: it shows handling structs (Paddle, Puck
 
 ## Usage
 
-rust-airhockey requires a very recent version of the Rust compiler. I used rustc 0.6 (b171d0e 2013-02-28 01:12:38 -0800) to compile the project. At the time of writing this version is in the [incoming](https://github.com/mozilla/rust/tree/incoming) branch of Rust.
+rust-airhockey requires a very recent version of the Rust compiler. I used rustc 0.6 to compile the project.
 
 To compile rust-airhockey first install [rust-sdl](https://github.com/brson/rust-sdl):
 
-    $ cargo install sdl
+    $ rustpkg install https://github.com/brson/rust-sdl
 
 Now you can compile rust-airhockey:
 
