@@ -34,8 +34,8 @@ pub impl<T> PendingList<T> {
     }
 }
 impl<T> iter::BaseIter<T> for PendingList<T> {
-    pure fn each(&self, blk: fn(v: &T) -> bool) { self.objects.each(blk) }
-    pure fn size_hint(&self) -> Option<uint> { self.objects.size_hint() }
+    fn each(&self, blk: &fn(v: &T) -> bool) { self.objects.each(blk) }
+    fn size_hint(&self) -> Option<uint> { self.objects.size_hint() }
 }
 fn remove_elem<T>(v:&mut ~[T], x:T) -> Option<uint> {
     let result = match position(*v, |&y| { core::ptr::ref_eq(&x,&y) }) {

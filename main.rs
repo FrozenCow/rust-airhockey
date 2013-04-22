@@ -1,7 +1,4 @@
 extern mod sdl;
-mod gl;
-mod vec2;
-mod pendinglist;
 
 use core::float::*;
 use core::num::*;
@@ -15,6 +12,10 @@ use gl::*;
 use pendinglist::*;
 //use option::{Some, None};
 use vec2::*;
+
+mod gl;
+mod vec2;
+mod pendinglist;
 
 unsafe fn glVertex(v: Vec2) {
     glVertex2f(v.x as f32, v.y as f32);
@@ -308,7 +309,7 @@ fn handleSDLEvents(game: &mut Game) -> bool {
     return true;
 }
 
-fn gameLoop(game: &mut Game, update: fn(&mut Game) -> bool) {
+fn gameLoop(game: &mut Game, update: &fn(&mut Game) -> bool) {
     while handleSDLEvents(game) && update(game) {
     }
 }
