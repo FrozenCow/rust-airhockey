@@ -1,12 +1,6 @@
 extern mod sdl;
-mod gl;
-mod vec2;
-mod pendinglist;
 
-use core::float::*;
 use core::num::*;
-use core::ptr::ref_eq;
-use core::cmp::Eq;
 use core::vec::*;
 use sdl::sdl::*;
 use sdl::video::*;
@@ -15,6 +9,10 @@ use gl::*;
 use pendinglist::*;
 //use option::{Some, None};
 use vec2::*;
+
+mod gl;
+mod vec2;
+mod pendinglist;
 
 unsafe fn glVertex(v: Vec2) {
     glVertex2f(v.x as f32, v.y as f32);
@@ -72,7 +70,7 @@ fn newPole(position:Vec2) -> @mut Paddle {
 }
 
 struct Game {
-    objects: PendingList<GameObject>,
+    objects: PendingList<@GameObject>,
     player: @mut Paddle,
     playerScore: uint,
     opponent: @mut Paddle,
@@ -180,6 +178,7 @@ fn handleOpponent(game:&mut Game) {
     let position = game.opponent.position;
     let goal = Vec2(game.field.x, game.field.y*0.5);
     let puck = game.puck;
+    let velocity = puck.velocity;
     let goalDirection = (position - goal).normalizeOrZero();
     let puckDirection = (position - puck.position).normalizeOrZero();
     let puckDistance = (position - puck.position).length();
@@ -190,7 +189,7 @@ fn handleOpponent(game:&mut Game) {
     { velocityTowards(position, puck.position, attackSpeed) }
     else if // Should we move towards the puck (player is too far away) ?
            goalDirection.dot(puckDirection) < 0.
-        && puck.velocity.length() < 3.
+        && velocity.length() < 3.
         && distance(game.player.position,puck.position) / distance(position,puck.position) > 2.0
     { velocityTowards(position, puck.position, defenceSpeed) }
     else // Should we stand between puck and goal (defend) ?
@@ -246,9 +245,9 @@ fn getSurface(game: &Game, p:&Puck) -> Option<Vec2> {
 fn setupGame() -> ~Game {
     let field = Vec2(640.,480.);
 
-    let player = newPaddle(Vec2(100., field.y*0.5));
-    let opponent = newPaddle(Vec2(field.x-100., field.y*0.5));
-    let puck = newPuck(Vec2{x:320.,y:240.});
+    let mut player = newPaddle(Vec2(100., field.y*0.5));
+    let mut opponent = newPaddle(Vec2(field.x-100., field.y*0.5));
+    let mut puck = newPuck(Vec2{x:320.,y:240.});
 
     let goalSize = 250.;
 
@@ -308,14 +307,15 @@ fn handleSDLEvents(game: &mut Game) -> bool {
     return true;
 }
 
-fn gameLoop(game: &mut Game, update: fn(&mut Game) -> bool) {
+fn gameLoop(game: &mut Game, update: &fn(&mut Game) -> bool) {
     while handleSDLEvents(game) && update(game) {
     }
 }
 
 fn main() {
     do sdl::start {
-        init(&[InitEverything]);
+        let init_flags = ~[InitEverything];
+        init(init_flags);
         set_video_mode(640,480,32,&[],&[DoubleBuf,OpenGL]);
 
         unsafe {
