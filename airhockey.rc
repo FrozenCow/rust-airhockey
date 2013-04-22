@@ -1,0 +1,11 @@
+#[link(name = "airhockey",
+        vers = "0.5.0",
+        uuid = "8261635d-b3ad-45cb-aa15-a07d83252fef")];
+
+#[crate_type = "bin"];
+
+extern mod sdl;
+mod vec2;
+mod pendinglist;
+mod gl;
+mod airhockey;
